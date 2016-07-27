@@ -44,6 +44,7 @@ public class UsbModule extends ReactContextBaseJavaModule {
     private UsbDeviceConnection usbConnection;
     private UsbSerialDevice serial;
     private int baudRate=9600;
+    private boolean open=false;
     private StringBuffer buffer = new StringBuffer();
     private String separator="\n";
 
@@ -64,7 +65,7 @@ public class UsbModule extends ReactContextBaseJavaModule {
         return MODULE_NAME;
     }
 
-    //UsbModule.open(data => {  console.log("received: ", data); });
+    //UsbModule.open(9600, "\n");
     @ReactMethod
     public void open(final int baudRate, String separator) {  //boolean sync
         this.baudRate=baudRate;
@@ -123,6 +124,12 @@ public class UsbModule extends ReactContextBaseJavaModule {
         if ( this.serial != null)
             this.serial.close();
     }
+    private void openDevice(UsbDevice d){
+        usbConnection = usbManager.openDevice(d);
+        listen(separator);
+        open=true;
+        Log.d(MODULE_NAME,"device opened");
+    }
     private void requestPermission(){
         PendingIntent permissionIntent = PendingIntent.getBroadcast(reactContext, 0, new Intent(ACTION_USB_PERMISSION), 0);
         HashMap<String, UsbDevice> usbDevices = usbManager.getDeviceList();
@@ -133,8 +140,11 @@ public class UsbModule extends ReactContextBaseJavaModule {
                 int devicePID = d1.getProductId();
                 Log.d(MODULE_NAME,"VendorId:"+deviceVID+"ProductId:"+devicePID);
                 if (deviceVID != 0x1d6b && (devicePID != 0x0001 && devicePID != 0x0002 && devicePID != 0x0003)) {
-                    // There is a device connected to our Android device. Try to open it as a Serial Port.
-                    this.usbManager.requestPermission(d1, permissionIntent);
+                    if(!this.usbManager.hasPermission(d1)){
+                        this.usbManager.requestPermission(d1, permissionIntent);
+                    }else if(!open){
+                        openDevice(d1);
+                    }
                     this.device = d1;
                 }
             }
@@ -144,10 +154,8 @@ public class UsbModule extends ReactContextBaseJavaModule {
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(ACTION_USB_PERMISSION)) {
                 boolean granted = intent.getExtras().getBoolean(UsbManager.EXTRA_PERMISSION_GRANTED);
-                if(granted){
-                    usbConnection = usbManager.openDevice(device);
-                    listen(separator);
-                    Log.d(MODULE_NAME,"Permission granted");
+                if(granted && !open){
+                    openDevice(device);
                 }else{
                     Log.e(MODULE_NAME,"Permission not granted");
                 }
