@@ -116,11 +116,12 @@ public class UsbModule extends ReactContextBaseJavaModule {
     };
     @ReactMethod
     public void write(String data){
-        if ( this.serial != null)
+        if ( this.serial != null )
             this.serial.write(data.getBytes());
     }
     @ReactMethod
     public void close(){
+        open=false;
         if ( this.serial != null)
             this.serial.close();
     }
@@ -162,8 +163,7 @@ public class UsbModule extends ReactContextBaseJavaModule {
             }else if (intent.getAction().equals(ACTION_USB_ATTACHED)) {
                 requestPermission(); // A USB device has been attached. Try to open it as a Serial port
             } else if (intent.getAction().equals(ACTION_USB_DETACHED)) {
-                if(serial != null) serial.close();
-                else Log.e(MODULE_NAME,"USB_DETACHED:serial="+serial);
+                close();
             }
         }
     };
