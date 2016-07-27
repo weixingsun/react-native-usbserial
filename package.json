@@ -1,12 +1,73 @@
 {
-  "name": "react-native-usbserial",
-  "description": "React Native Serial Port USB component for Android + iOS",
-  "version": "0.0.1",
-  "scripts": {
-    "start": "react-native start"
+  "_args": [
+    [
+      {
+        "raw": "react-native-usbserial@git+https://github.com/weixingsun/react-native-usbserial.git",
+        "scope": null,
+        "escapedName": "react-native-usbserial",
+        "name": "react-native-usbserial",
+        "rawSpec": "git+https://github.com/weixingsun/react-native-usbserial.git",
+        "spec": "git+https://github.com/weixingsun/react-native-usbserial.git",
+        "type": "hosted",
+        "hosted": {
+          "type": "github",
+          "ssh": "git@github.com:weixingsun/react-native-usbserial.git",
+          "sshUrl": "git+ssh://git@github.com/weixingsun/react-native-usbserial.git",
+          "httpsUrl": "git+https://github.com/weixingsun/react-native-usbserial.git",
+          "gitUrl": "git://github.com/weixingsun/react-native-usbserial.git",
+          "shortcut": "github:weixingsun/react-native-usbserial",
+          "directUrl": "https://raw.githubusercontent.com/weixingsun/react-native-usbserial/master/package.json"
+        }
+      },
+      "/Users/weixingsun/share"
+    ]
+  ],
+  "_from": "git+https://github.com/weixingsun/react-native-usbserial.git",
+  "_id": "react-native-usbserial@0.0.1",
+  "_inCache": true,
+  "_installable": true,
+  "_location": "/react-native-usbserial",
+  "_phantomChildren": {},
+  "_requested": {
+    "raw": "react-native-usbserial@git+https://github.com/weixingsun/react-native-usbserial.git",
+    "scope": null,
+    "escapedName": "react-native-usbserial",
+    "name": "react-native-usbserial",
+    "rawSpec": "git+https://github.com/weixingsun/react-native-usbserial.git",
+    "spec": "git+https://github.com/weixingsun/react-native-usbserial.git",
+    "type": "hosted",
+    "hosted": {
+      "type": "github",
+      "ssh": "git@github.com:weixingsun/react-native-usbserial.git",
+      "sshUrl": "git+ssh://git@github.com/weixingsun/react-native-usbserial.git",
+      "httpsUrl": "git+https://github.com/weixingsun/react-native-usbserial.git",
+      "gitUrl": "git://github.com/weixingsun/react-native-usbserial.git",
+      "shortcut": "github:weixingsun/react-native-usbserial",
+      "directUrl": "https://raw.githubusercontent.com/weixingsun/react-native-usbserial/master/package.json"
+    }
   },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "git+https://github.com/weixingsun/react-native-usbserial.git#3aa555942dd3a5cbf087f0d6dfbce5a0b267f0fa",
+  "_shasum": "5da858b95150ee51ab5ce2fbfb03956e278630d6",
+  "_shrinkwrap": null,
+  "_spec": "react-native-usbserial@git+https://github.com/weixingsun/react-native-usbserial.git",
+  "_where": "/Users/weixingsun/share",
   "dependencies": {
     "react": "15.2.1",
     "react-native": "^0.29.2"
-  }
+  },
+  "description": "React Native Serial Port USB component for Android + iOS",
+  "devDependencies": {},
+  "gitHead": "3aa555942dd3a5cbf087f0d6dfbce5a0b267f0fa",
+  "name": "react-native-usbserial",
+  "optionalDependencies": {},
+  "readme": "# react-native-usbserial\n",
+  "readmeFilename": "README.md",
+  "scripts": {
+    "start": "react-native start"
+  },
+  "version": "0.0.1"
 }
