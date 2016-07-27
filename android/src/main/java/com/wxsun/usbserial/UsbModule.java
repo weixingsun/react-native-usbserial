@@ -44,6 +44,8 @@ public class UsbModule extends ReactContextBaseJavaModule {
     private UsbDeviceConnection usbConnection;
     private UsbSerialDevice serial;
     private int baudRate=9600;
+    private StringBuffer buffer = new StringBuffer();
+    private String separator="\n";
 
     public UsbModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -64,26 +66,29 @@ public class UsbModule extends ReactContextBaseJavaModule {
 
     //UsbModule.open(data => {  console.log("received: ", data); });
     @ReactMethod
-    public void open(final int baudRate) {
+    public void open(final int baudRate, String separator) {  //boolean sync
         this.baudRate=baudRate;
-        this.listen();
+        this.separator = separator;
+        this.listen(separator);
     }
 
-    private void listen(){
+    private void listen(String separator){
         if(device==null || usbConnection==null) return;
         serial = UsbSerialDevice.createUsbSerialDevice(device, usbConnection);
         if (serial != null) {
-            if (serial.open()) {
+            boolean pass = serial.open(); //sync?serial.syncOpen():serial.open();
+            if (pass) {
                 serial.setBaudRate(baudRate);
                 serial.setDataBits(UsbSerialInterface.DATA_BITS_8);
                 serial.setParity(UsbSerialInterface.PARITY_ODD);
                 serial.setFlowControl(UsbSerialInterface.FLOW_CONTROL_OFF);
+                //if(sync) serial.syncRead(buffer, timeout);
                 serial.read(mCallback);
             } else {
-                //errcallback.invoke("DeviceOpenError:busy or driver not working");
+                //Log.e("DeviceOpenError:busy or driver not working");
             }
         } else {
-            //errcallback.invoke("NoDriverError");
+            //Log.e("NoDriverError");
         }
     }
     private void sendEvent(String data) {
@@ -97,8 +102,12 @@ public class UsbModule extends ReactContextBaseJavaModule {
         public void onReceivedData(byte[] data) {
             try {
                 String str = new String(data, "UTF-8");
-                sendEvent(str);
-                Log.d(MODULE_NAME,"received:"+str);
+                buffer.append(str);
+                if(str.contains(separator)){
+                    sendEvent(buffer.toString());
+                    buffer.setLength(0);
+                }
+                //Log.d(MODULE_NAME,"received:"+str);
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
             }
@@ -137,7 +146,7 @@ public class UsbModule extends ReactContextBaseJavaModule {
                 boolean granted = intent.getExtras().getBoolean(UsbManager.EXTRA_PERMISSION_GRANTED);
                 if(granted){
                     usbConnection = usbManager.openDevice(device);
-                    listen();
+                    listen(separator);
                     Log.d(MODULE_NAME,"Permission granted");
                 }else{
                     Log.e(MODULE_NAME,"Permission not granted");
