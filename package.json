@@ -1,5 +1,5 @@
 {
-  "name": "usbserial",
+  "name": "react-native-usbserial",
   "description": "React Native Serial Port USB component for Android + iOS",
   "version": "0.0.1",
   "scripts": {
