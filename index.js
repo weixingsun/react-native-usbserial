@@ -8,10 +8,14 @@ type Device = {
   productId: number;    // The amount of available storage space on the device (in bytes).
 };
 class USB {
+    monitor(func){
+        if(this.eventListener) this.eventListener.remove();
+        this.eventListener = DeviceEventEmitter.addListener('UsbSerialEvent', func);
+    }
     listen(name,rate,sep,func){
         if(Platform.OS === 'android' && Platform.Version > 22){
             _UsbSerial.open(name,rate,sep);
-            this.eventListener = DeviceEventEmitter.addListener('UsbSerialEvent', func);
+            this.monitor(func);
         }
     }
     close() {
