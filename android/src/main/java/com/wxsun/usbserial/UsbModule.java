@@ -22,9 +22,11 @@ import com.facebook.react.ReactPackage;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.NativeModule;
+import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.facebook.react.uimanager.ViewManager;
 import com.facebook.react.bridge.JavaScriptModule;
@@ -47,12 +49,13 @@ public class UsbModule extends ReactContextBaseJavaModule {
     private boolean open=false;
     private StringBuffer buffer = new StringBuffer();
     private String separator="\n";
+    //private Map<String, UsbDevice> deviceList = new HashMap<String, UsbDevice>();
 
     public UsbModule(ReactApplicationContext reactContext) {
         super(reactContext);
         this.reactContext = reactContext;
         this.usbManager = (UsbManager) this.reactContext.getSystemService(Context.USB_SERVICE);
-        this.requestPermission();
+        //this.requestPermission();
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_USB_PERMISSION);
         filter.addAction(ACTION_USB_DETACHED);
@@ -65,11 +68,13 @@ public class UsbModule extends ReactContextBaseJavaModule {
         return MODULE_NAME;
     }
 
-    //UsbModule.open(9600, "\n");
+    //UsbModule.open(9600, '\n');
     @ReactMethod
-    public void open(final int baudRate, String separator) {  //boolean sync
+    public void open(final String name, int baudRate, String separator) {  //boolean sync
         this.baudRate=baudRate;
         this.separator = separator;
+        this.device = usbManager.getDeviceList().get(name);
+        this.usbConnection = usbManager.openDevice(device);
         this.listen(separator);
     }
 
@@ -92,9 +97,19 @@ public class UsbModule extends ReactContextBaseJavaModule {
             //Log.e("NoDriverError");
         }
     }
-    private void sendEvent(String data) {
+    private void sendEvent(String key, String data) {
         WritableMap params = Arguments.createMap();
-        params.putString("data", data);
+        params.putString(key, data);
+        getReactApplicationContext().getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(UsbEventName, params);
+    }
+    private void sendEvent(String key, WritableMap data) {
+        WritableMap params = Arguments.createMap();
+        params.putMap(key, data);
+        getReactApplicationContext().getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(UsbEventName, params);
+    }
+    private void sendEvent(String key, WritableArray data) {
+        WritableMap params = Arguments.createMap();
+        params.putArray(key, data);
         getReactApplicationContext().getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(UsbEventName, params);
     }
 
@@ -105,10 +120,10 @@ public class UsbModule extends ReactContextBaseJavaModule {
                 String str = new String(data, "UTF-8");
                 buffer.append(str);
                 if(str.contains(separator)){
-                    sendEvent(buffer.toString());
+                    sendEvent("read", buffer.toString());
                     buffer.setLength(0);
                 }
-                //Log.d(MODULE_NAME,"received:"+str);
+                Log.d(MODULE_NAME,"=====================================================UsbReadCallback.received:"+buffer.toString());
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
             }
@@ -121,33 +136,28 @@ public class UsbModule extends ReactContextBaseJavaModule {
     }
     @ReactMethod
     public void close(){
-        open=false;
         if ( this.serial != null)
             this.serial.close();
     }
-    private void openDevice(UsbDevice d){
-        usbConnection = usbManager.openDevice(d);
-        listen(separator);
-        open=true;
-        Log.d(MODULE_NAME,"device opened");
-    }
-    private void requestPermission(){
+    private void requestPermission(UsbDevice d1){
         PendingIntent permissionIntent = PendingIntent.getBroadcast(reactContext, 0, new Intent(ACTION_USB_PERMISSION), 0);
-        HashMap<String, UsbDevice> usbDevices = usbManager.getDeviceList();
-        if (!usbDevices.isEmpty()) {
-            for (Map.Entry<String, UsbDevice> entry : usbDevices.entrySet()) {
+        int deviceVID = d1.getVendorId();
+        int devicePID = d1.getProductId();
+        if (deviceVID != 0x1d6b && (devicePID != 0x0001 && devicePID != 0x0002 && devicePID != 0x0003)) {
+            if(!this.usbManager.hasPermission(d1)){
+                this.usbManager.requestPermission(d1, permissionIntent);
+                Log.e(MODULE_NAME,"===========================================Ask for permission");
+            }else{
+                Log.e(MODULE_NAME,"===========================================Remember permission");
+            }
+        }
+    }
+    private void requestAllPermission(){
+        Map<String, UsbDevice> usbList = usbManager.getDeviceList();
+        if (!usbList.isEmpty()) {
+            for (Map.Entry<String, UsbDevice> entry : usbList.entrySet()) {
                 UsbDevice d1 = entry.getValue();
-                int deviceVID = d1.getVendorId();
-                int devicePID = d1.getProductId();
-                Log.d(MODULE_NAME,"VendorId:"+deviceVID+"ProductId:"+devicePID);
-                if (deviceVID != 0x1d6b && (devicePID != 0x0001 && devicePID != 0x0002 && devicePID != 0x0003)) {
-                    if(!this.usbManager.hasPermission(d1)){
-                        this.usbManager.requestPermission(d1, permissionIntent);
-                    }else if(!open){
-                        openDevice(d1);
-                    }
-                    this.device = d1;
-                }
+                requestPermission(d1);
             }
         }
     }
@@ -156,15 +166,40 @@ public class UsbModule extends ReactContextBaseJavaModule {
             if (intent.getAction().equals(ACTION_USB_PERMISSION)) {
                 boolean granted = intent.getExtras().getBoolean(UsbManager.EXTRA_PERMISSION_GRANTED);
                 if(granted && !open){
-                    openDevice(device);
+                    //openDevice(device);
+                    Log.e(MODULE_NAME,"================Permission granted");
                 }else{
-                    Log.e(MODULE_NAME,"Permission not granted");
+                    Log.e(MODULE_NAME,"============Permission not granted");
                 }
             }else if (intent.getAction().equals(ACTION_USB_ATTACHED)) {
-                requestPermission(); // A USB device has been attached. Try to open it as a Serial port
+                requestAllPermission(); // A USB device has been attached. Try to open it as a Serial port
+                sendEvent("attached", generateDeviceList());
             } else if (intent.getAction().equals(ACTION_USB_DETACHED)) {
                 close();
+                sendEvent("attached", generateDeviceList());
             }
         }
     };
+    private WritableArray generateDeviceList(){
+        WritableArray list = Arguments.createArray();
+        Map<String, UsbDevice> usbList = usbManager.getDeviceList();
+        if (!usbList.isEmpty()) {
+          for (Map.Entry<String, UsbDevice> entry : usbList.entrySet()) {
+            WritableMap item = Arguments.createMap();
+            UsbDevice d1 = entry.getValue();
+            item.putString("device", d1.getDeviceName());
+            item.putString("vendorId", ""+d1.getVendorId());
+            item.putString("productId", ""+d1.getProductId());
+            item.putString("vendor", d1.getManufacturerName());
+            item.putString("product", d1.getProductName());
+            item.putString("serialNumber", d1.getSerialNumber());
+            list.pushMap(item);
+          }
+        }
+        return list;
+    }
+    @ReactMethod
+    public void listDevices(Promise promise) {
+        promise.resolve(generateDeviceList());
+    }
 }
