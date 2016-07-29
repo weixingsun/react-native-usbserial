@@ -3,10 +3,6 @@
 
 import {DeviceEventEmitter,NativeModules,Platform,} from 'react-native';
 const _UsbSerial = NativeModules.UsbSerial;
-type Device = {
-  vendorId: number;   // The total amount of storage space on the device (in bytes).
-  productId: number;    // The amount of available storage space on the device (in bytes).
-};
 class USB {
     monitor(func){
         if(this.eventListener) this.eventListener.remove();
@@ -39,7 +35,7 @@ class USB {
         }
     }
 };
-USB.open = _UsbSerial.open
-USB.close= _UsbSerial.close
-USB.write= _UsbSerial.write
+//USB.open = _UsbSerial.open
+//USB.close= _UsbSerial.close
+//USB.write= _UsbSerial.write
 export default new USB()
