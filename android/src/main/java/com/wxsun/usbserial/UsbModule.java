@@ -11,6 +11,7 @@ import android.hardware.usb.UsbManager;
 import android.util.Log;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,7 +48,7 @@ public class UsbModule extends ReactContextBaseJavaModule {
     private UsbSerialDevice serial;
     private int baudRate=9600;
     private boolean open=false;
-    private StringBuffer buffer = new StringBuffer();
+    private StringBuilder buffer = new StringBuilder();
     private String separator="\n";
     //private Map<String, UsbDevice> deviceList = new HashMap<String, UsbDevice>();
 
@@ -116,23 +117,65 @@ public class UsbModule extends ReactContextBaseJavaModule {
     private UsbSerialInterface.UsbReadCallback mCallback = new UsbSerialInterface.UsbReadCallback() {
         @Override
         public void onReceivedData(byte[] data) {
-            try {
-                String str = new String(data, "UTF-8");
-                buffer.append(str);
-                if(str.contains(separator)){
-                    sendEvent("read", buffer.toString());
-                    buffer.setLength(0);
-                }
-                Log.d(MODULE_NAME,"=====================================================UsbReadCallback.received:"+buffer.toString());
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
+            //if(separator.startsWith("0x")) 
+                //String end = separator.substring(2);
+            //    proceedHex(data);
+            //else 
+            proceedUtf8(data);
+        }
+        private void proceedUtf8(byte[] data){
+            //String utfStr = new String(data, "UTF-8");
+            String utfStr = new String(data, StandardCharsets.UTF_8);
+            buffer.append(utfStr);
+            if(utfStr.contains(separator)){
+                sendEvent("read", buffer.toString());
+                buffer.setLength(0);
             }
+            //Log.d(MODULE_NAME,"=====================================================UsbReadCallback.received utf8:"+utfStr);
+        }
+        private void proceedHex(byte[] in){
+            for(byte b : in) {
+                buffer.append(String.format("%02x", b));
+            }
+            String sep = separator.substring(2);
+            String wholeStr = buffer.toString();
+            if(wholeStr.contains(sep)){
+                sendEvent("read", wholeStr);
+                buffer.setLength(0);
+            }
+            //Log.d(MODULE_NAME,"=====================================================UsbReadCallback.received hex:"+buffer.toString());
         }
     };
-    @ReactMethod
+    private byte[] strToBytes(String s){  //send lora header [0000.00]= [addr.ch]
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+          data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                             + Character.digit(s.charAt(i+1), 16));
+        }
+        return data;
+    }
+    /*@ReactMethod
     public void write(String data){
-        if ( this.serial != null )
-            this.serial.write(data.getBytes());
+        if ( this.serial != null ){
+            if(this.separator.startsWith("0x"))
+                this.serial.write(strToBytes(data));
+            else
+                this.serial.write(data.getBytes(StandardCharsets.UTF_8));
+        }
+    }*/
+    @ReactMethod
+    public void write(String to_str, String from_str, String data_str){
+        if ( this.serial != null ){
+            byte[] to   = strToBytes(to_str);
+            byte[] from = strToBytes(from_str);
+            byte[] data = data_str.getBytes(StandardCharsets.UTF_8);
+            byte[] all  = new byte[to.length + from.length + data.length];
+            System.arraycopy(to,   0, all, 0,           to.length);
+            System.arraycopy(from, 0, all, to.length,   from.length);
+            System.arraycopy(data, 0, all, to.length+from.length, data.length);
+            this.serial.write(all);
+        }
     }
     @ReactMethod
     public void close(){

@@ -21,9 +21,9 @@ class USB {
             _UsbSerial.close();
         }
     }
-    write(data){
+    write(to,from,data){
         if(Platform.OS === 'android' && Platform.Version > 22){
-            _UsbSerial.write(data);
+            _UsbSerial.write(to,from,data);
         }
     }
     //USB.listDevices().then((list) => { ... })
